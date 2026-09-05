@@ -1,0 +1,16 @@
+{
+  "name": "xisu-memorize-tool",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "系规知识点背记工具（Vercel + Serverless Functions 部署版）",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
+  }
+}
