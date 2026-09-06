@@ -39,12 +39,10 @@ async function blobBackend() {
     kind: 'blob',
     async get(k) {
       try {
-        // public store：SDK 返回元信息后经公开 URL 读取
         const r = await blob.get(PREFIX + k + '.json', { access: 'public' });
-        if (!r || !r.downloadUrl) return null;
-        const resp = await fetch(r.downloadUrl);
-        if (!resp.ok) return null;
-        return JSON.parse(await resp.text());
+        if (!r || r.statusCode !== 200 || !r.stream) return null;
+        const text = await new Response(r.stream).text();
+        return JSON.parse(text);
       } catch (e) {
         return null; // 不存在或读取失败均视为无数据
       }
