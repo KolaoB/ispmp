@@ -3,7 +3,7 @@
  * PUT /api/data  body: { k, doc } → { ok: true, storage, updatedAt }
  *
  * 存储后端：
- * - 生产（Vercel）：检测到 BLOB_READ_WRITE_TOKEN 时使用 Vercel Blob（private 访问，仅服务端可读）；
+ * - 生产（Vercel）：检测到 BLOB_READ_WRITE_TOKEN 时使用 Vercel Blob（public store）；
  * - 本地开发：未配置令牌时退回 /tmp 文件存储，仅用于调试，重启即清空。
  */
 import fs from 'node:fs';
@@ -39,18 +39,19 @@ async function blobBackend() {
     kind: 'blob',
     async get(k) {
       try {
-        // private 访问：URL 不可被直接读取，仅持有服务端令牌可读
-        const r = await blob.get(PREFIX + k + '.json', { access: 'private' });
-        if (!r || r.statusCode !== 200 || !r.stream) return null;
-        const text = await new Response(r.stream).text();
-        return JSON.parse(text);
+        // public store：SDK 返回元信息后经公开 URL 读取
+        const r = await blob.get(PREFIX + k + '.json', { access: 'public' });
+        if (!r || !r.downloadUrl) return null;
+        const resp = await fetch(r.downloadUrl);
+        if (!resp.ok) return null;
+        return JSON.parse(await resp.text());
       } catch (e) {
         return null; // 不存在或读取失败均视为无数据
       }
     },
     async put(k, doc) {
       await blob.put(PREFIX + k + '.json', JSON.stringify(doc), {
-        access: 'private',
+        access: 'public',
         addRandomSuffix: false,
         allowOverwrite: true,
         contentType: 'application/json',

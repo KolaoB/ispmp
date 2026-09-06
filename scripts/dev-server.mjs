@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import handler from '../api/data.js';
 
-/* ---- 加载 .env.local（不覆盖已有环境变量） ---- */
+/* ---- 加载 .env.local（不覆盖已有环境变量；跳过本地无用的 OIDC/Store 变量） ---- */
+const SKIP_ENV = new Set(['VERCEL_OIDC_TOKEN', 'BLOB_STORE_ID']);
 const ENV_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env.local');
 if (fs.existsSync(ENV_FILE)) {
   for (const line of fs.readFileSync(ENV_FILE, 'utf8').split('\n')) {
@@ -17,7 +18,7 @@ if (fs.existsSync(ENV_FILE)) {
     if (!m) continue;
     let v = m[2];
     if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-    if (!(m[1] in process.env)) process.env[m[1]] = v;
+    if (!SKIP_ENV.has(m[1]) && !(m[1] in process.env)) process.env[m[1]] = v;
   }
 }
 
