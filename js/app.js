@@ -271,7 +271,7 @@ const EXAM_DATE_KEY='xisu_exam_date';
 function getExamDate(){return localStorage.getItem(EXAM_DATE_KEY)||'';}
 function setExamDate(d){localStorage.setItem(EXAM_DATE_KEY,d);if(window.Sync)Sync.pushSoon();}
 
-/* 抽查记录：记录每题最近答对的日期时间，用于优先抽取久未答过的题 */
+/* 抽查记录：记录每题最近作答的日期时间（答对/答错均记录），用于抽查冷却与多端合并时判定最新状态 */
 const QUIZ_LOG_KEY='xisu_quiz_log';
 function loadQuizLog(){try{return JSON.parse(localStorage.getItem(QUIZ_LOG_KEY))||{};}catch(e){return{};}}
 function saveQuizLog(log){localStorage.setItem(QUIZ_LOG_KEY,JSON.stringify(log));if(window.Sync)Sync.pushSoon();}
@@ -1068,13 +1068,9 @@ function judgeMixQuestion(){
 
   // 更新状态
   if(mixMode==='test'){
-    // 已掌握抽查：答对→已掌握(1)并记录日期，答错→待巩固(2)
-    if(allOk){
-      chProg(q.cid)[q.idx]=1;
-      setQuizDate(q.cid,q.idx); // 记录答对日期
-    }else{
-      chProg(q.cid)[q.idx]=2;
-    }
+    // 已掌握抽查：答对→已掌握(1)，答错→待巩固(2)；作答时间都记录，供多端合并时以最近作答为准
+    chProg(q.cid)[q.idx]=allOk?1:2;
+    setQuizDate(q.cid,q.idx);
     saveProgress(progress);
   }else{
     // 待巩固复习：答对→恢复已掌握(1)并记录日期，答错→保持待巩固(2)

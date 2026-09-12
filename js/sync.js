@@ -1,7 +1,7 @@
 /* ===== 云端同步模块 =====
  * 学习进度 / 抽查记录 / 考试日期 同步到 Serverless API（/api/data）。
  * - 本地 localStorage 仍是第一数据源（离线可用、渲染零等待）；
- * - 启动时拉取云端数据并与本地合并（掌握状态 1 > 2 > 0 取高，记录时间取新）；
+ * - 启动时拉取云端数据并与本地合并（状态冲突时以最近作答一方为准，无时间戳则 1 > 2 > 0 取高）；
  * - 任何数据变更后防抖推送全量文档到云端；
  * - 多设备通过同一「学习码」共享进度，学习码即数据键名。
  */
@@ -57,25 +57,30 @@
   function canonical(doc){
     return JSON.stringify({progress:doc.progress||{},quizLog:doc.quizLog||{},examDate:doc.examDate||''});
   }
-  // 合并本地与云端：掌握状态取高（1>2>0），抽查记录时间取新，考试日期取较新文档的
+  // 合并本地与云端：抽查记录时间取新；掌握状态冲突时取「最近作答」的一方
+  // （quizLog 记录每次作答时间戳，答对/答错均记录），无时间戳时退回旧的 1>2>0 规则；考试日期取较新文档的
   function mergeDocs(local,remote){
     const out={progress:{},quizLog:{},examDate:''};
     const a=local.examDate||'',b=remote.examDate||'';
     if(a&&b&&a!==b)out.examDate=(local.savedAt||0)>=(remote.savedAt||0)?a:b;
     else out.examDate=a||b;
+    const lq=local.quizLog||{},rq=remote.quizLog||{};
+    const q=Object.assign({},lq);
+    Object.keys(rq).forEach(k=>{q[k]=Math.max(q[k]||0,rq[k]);});
+    out.quizLog=q;
     const lp=local.progress||{},rp=remote.progress||{};
     new Set([...Object.keys(lp),...Object.keys(rp)]).forEach(cid=>{
       const pa=lp[cid]||{},pb=rp[cid]||{},m={};
       new Set([...Object.keys(pa),...Object.keys(pb)]).forEach(i=>{
         const va=pa[i],vb=pb[i];
-        if(va===1||vb===1)m[i]=1;
-        else if(va===2||vb===2)m[i]=2;
+        if(va===vb){if(va)m[i]=va;return;}
+        // 两端状态不一致：最近作答的一方为准，避免旧设备的陈旧状态覆盖新作答（如已掌握抽查答错的待巩固）
+        const ta=lq[cid+'_'+i]||0,tb=rq[cid+'_'+i]||0;
+        const win=ta>tb?va:(tb>ta?vb:((va===1||vb===1)?1:2));
+        if(win)m[i]=win;
       });
       out.progress[cid]=m;
     });
-    const q=Object.assign({},local.quizLog||{});
-    Object.keys(remote.quizLog||{}).forEach(k=>{q[k]=Math.max(q[k]||0,remote.quizLog[k]);});
-    out.quizLog=q;
     return out;
   }
   // 把合并结果写回 localStorage
