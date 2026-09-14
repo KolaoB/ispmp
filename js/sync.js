@@ -2,6 +2,7 @@
  * 学习进度 / 抽查记录 / 考试日期 同步到 Serverless API（/api/data）。
  * - 本地 localStorage 仍是第一数据源（离线可用、渲染零等待）；
  * - 启动时拉取云端数据并与本地合并（状态冲突时以最近作答一方为准；无/同时间戳时待巩固优先于已掌握）；
+ *   切换学习码时先清空本地再拉取，账号之间互不混合；
  * - 任何数据变更后防抖推送全量文档到云端；
  * - 多设备通过同一「学习码」共享进度，学习码即数据键名。
  */
@@ -169,6 +170,11 @@
     if(nc===code){if(msg)msg.textContent='已经是当前学习码';return false;}
     code=nc;
     localStorage.setItem(CODE_KEY,code);
+    // 切换账号：先清空本地旧账号数据再拉取云端，避免新旧账号进度合并串数据；
+    // 拉取失败时本地保持为空，刷新页面会重新从云端拉取新账号数据，不会误推旧数据
+    localStorage.removeItem(keys.progress);
+    localStorage.removeItem(keys.quizLog);
+    localStorage.removeItem(keys.examDate);
     if(msg)msg.textContent='已切换到 '+code+'，正在拉取云端进度…';
     try{
       await pullAndMerge();

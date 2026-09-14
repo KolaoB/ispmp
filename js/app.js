@@ -359,7 +359,7 @@ function renderStats(){
     <div class="qcard">
       <div style="font-size:15px;font-weight:700;margin-bottom:10px;">🗓️ 设置考试日期</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <input type="date" id="examDateInput" value="${examDate}" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;">
+        <input type="date" id="examDateInput" value="${examDate}" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;">
         <button class="btn primary" id="saveExamDate">保存</button>
         <span class="small-text">设定后会自动计算每日学习量</span>
       </div>
